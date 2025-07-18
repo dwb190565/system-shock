@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Glitch Pilgrim</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P" rel="stylesheet"/>
+<style>
+/* Reset and basic styling */
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+    background:#000;
+    font-family:'Press Start 2P',monospace;
+    color:#0f0;
+    overflow:hidden;
+    height:100vh;
+    cursor:none; /* Custom cursor */
+    /* CRT bend */
+    filter: contrast(1.05) brightness(1.05) saturate(0.9);
+}
+
+/* Game container for positioning canvas and HUD */
+#game-container{
+    position:relative;
+    width:100%;
+    height:100vh;
+}
+
+/* Game canvas for drawing graphics */
+#game-canvas{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%; /* Make canvas responsive */
+    height:100%; /* Make canvas responsive */
+    image-rendering:pixelated; /* For retro pixel art effect */
+    /* Scan-line overlay */
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.1),
+        rgba(0, 0, 0, 0.1) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+}
+
+/* Heads-Up Display (HUD) */
+#hud{
+    position:absolute;
+    top:20px;
+    left:20px;
+    z-index:10;
+    transition:all .3s; /* Smooth transition for corruption effect */
+}
+
+/* Corruption meter styling */
+#corruption-meter{
+    width:200px;
+    height:20px;
+    border:2px solid #0f0;
+    margin-bottom:10px;
+    border-radius: 4px; /* Rounded corners */
+    overflow: hidden;
+}
+
+#corruption-fill{
+    height:100%;
+    width:10%; /* Initial fill */
+    background:#0f0;
+    transition:width .5s; /* Smooth fill animation */
+    border-radius: 2px; /* Inner rounded corners */
+}
+
+/* Dimension indicator text */
+#dimension-indicator{
+    font-size:12px;
+    margin-bottom:10px;
+}
+
+/* Status text for game messages */
+#status-text{
+    font-size:10px;
+    max-width:300px;
+    line-height:1.5;
+}
+
+/* Glitch text animation */
+.glitch-text{
+    animation:glitch 2s infinite;
+}
+
+@keyframes glitch{
+    0%{text-shadow:0 0 5px #0f0}
+    20%{text-shadow:-2px 0 #f0f,2px 2px #0ff}
+    40%{text-shadow:2px -2px #f0f,-2px 2px #0ff}
+    60%{text-shadow:-2px 2px #f0f,2px -2px #0ff}
+    80%{text-shadow:2px 2px #f0f,-2px -2px #0ff}
+    100%{text-shadow:0 0 5px #0f0}
+}
+
+/* Intro screen styling */
+#intro-screen{
+    position:absolute;
+    inset:0; /* Top, right, bottom, left to 0 */
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    background:#000;
+    z-index:100;
+    transition:opacity 1s; /* Fade out effect */
+}
+
+/* Title styling for intro screen */
+#title{
+    font-size:32px;
+    margin-bottom:40px;
+    animation:glitch 3s infinite; /* Glitch effect on title */
+}
+
+/* Subtitle styling for intro screen */
+#subtitle{
+    font-size:24px; /* Large font size */
+    margin-top: -10px; /* Adjusted to add a bit more space, from -30px to -10px */
+    margin-bottom: 40px; /* Space before description */
+    animation: electric-shock 0.5s infinite alternate; /* Electric shock animation */
+}
+
+@keyframes electric-shock {
+    0% {
+        color: #FFD700; /* Gold/Yellow */
+        text-shadow: 0 0 5px #FFD700, 0 0 10px #FF4500; /* Yellow glow, Orange-Red secondary */
+        transform: translateX(0px) translateY(0px);
+    }
+    25% {
+        color: #FF4500; /* Orange-Red */
+        text-shadow: 1px 1px 8px #FF4500, -1px -1px 12px #FFD700;
+        transform: translateX(1px) translateY(-1px);
+    }
+    50% {
+        color: #FFD700;
+        text-shadow: 0 0 5px #FFD700, 0 0 10px #FF4500;
+        transform: translateX(-1px) translateY(1px);
+    }
+    75% {
+        color: #FF4500;
+        text-shadow: 1px -1px 8px #FF4500, -1px 1px 12px #FFD700;
+        transform: translateX(1px) translateY(1px);
+    }
+    100% {
+        color: #FFD700;
+        text-shadow: 0 0 5px #FFD700, 0 0 10px #FF4500;
+        transform: translateX(0px) translateY(0px);
+    }
+}
+
+
+/* Start button styling */
+#start-button{
+    background:none;
+    border:2px solid #0f0;
+    color:#0f0;
+    padding:10px 20px;
+    font-family:inherit;
+    font-size:16px;
+    cursor:pointer;
+    border-radius: 8px; /* Rounded corners */
+    transition: all 0.2s ease-in-out; /* Smooth hover effect */
+    margin-bottom: 10px; /* Space between buttons */
+}
+
+#start-button:hover{
+    background:#0f0;
+    color:#000;
+    box-shadow:0 0 15px #0f0; /* Glow effect on hover */
+    transform: scale(1.05); /* Slightly enlarge on hover */
+}
+
+/* Game Rules button styling */
+#rules-button {
+    background: none;
+    border: 2px solid #0f0;
+    color: #0f0;
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+    margin-bottom: 20px; /* Space before mutator */
+}
+
+#rules-button:hover {
+    background: #0f0;
+    color: #000;
+    box-shadow: 0 0 15px #0f0;
+    transform: scale(1.05);
+}
+
+/* Corruption effect for HUD */
+.corrupted{
+    animation:corruption .5s infinite;
+}
+
+@keyframes corruption{
+    0%{filter:hue-rotate(0) blur(0)}
+    25%{filter:hue-rotate(90deg) blur(1px)}
+    50%{filter:hue-rotate(180deg) blur(0)}
+    75%{filter:hue-rotate(270deg) blur(1px)}
+    100%{filter:hue-rotate(360deg) blur(0)}
+}
+
+/* Utility class for hiding elements */
+.hidden{
+    opacity:0;
+    pointer-events:none; /* Disable interactions when hidden */
+}
+
+/* Mute button styling */
+#mute-button{
+    position:absolute;
+    bottom:20px;
+    right:20px;
+    background:none;
+    border:none;
+    color:#0f0;
+    font-size:20px;
+    cursor:pointer;
+    z-index: 10; /* Ensure it's above other elements */
+    transition: transform 0.2s ease-in-out;
+}
+
+#mute-button:hover {
+    transform: scale(1.2); /* Slightly enlarge on hover */
+}
+
+/* Mutator dropdown styling */
+#mutator-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    font-size: 10px;
+}
+
+#mutator-container label {
+    margin-right: 5px;
+}
+
+#mutator-select {
+    background: #000;
+    border: 1px solid #0f0;
+    color: #0f0;
+    padding: 5px;
+    font-family: inherit;
+    border-radius: 4px;
+}
+
+/* System Shock visual effect */
+#game-container.system-shock-effect {
+    animation: screen-shake 0.05s infinite alternate, color-invert-flash 0.3s ease-out forwards;
+}
+
+@keyframes screen-shake {
+    0% { transform: translate(1px, 1px); }
+    25% { transform: translate(-1px, 0px); }
+    50% { transform: translate(0px, 1px); }
+    75% { transform: translate(-1px, -1px); }
+    100% { transform: translate(1px, 0px); }
+}
+
+@keyframes color-invert-flash {
+    0% { filter: none; } /* Start with no extra filter */
+    50% { filter: invert(1) hue-rotate(180deg); } /* Invert colors and shift hue */
+    100% { filter: none; } /* End with no extra filter */
+}
+
+/* Rules Overlay Styling */
+#rules-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95); /* Semi-transparent black background */
+    z-index: 200; /* Above everything else */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    text-align: center;
+    transition: opacity 0.5s ease;
+
+    /* Box properties for the rules overlay */
+    width: 90%; /* Responsive width */
+    max-width: 800px; /* Max width for larger screens */
+    height: 90%; /* Responsive height */
+    max-height: 90vh; /* Max height for larger screens */
+    border: 2px solid #0f0;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); /* Green glow */
+    margin: auto; /* Center the box */
+}
+
+#rules-overlay h2 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #0f0;
+    text-shadow: 0 0 10px #0f0;
+}
+
+/* Inner container for scrollable rules content */
+#rules-content-scroll {
+    flex-grow: 1; /* Allows content to take available space */
+    overflow-y: auto; /* Enables vertical scrolling */
+    padding-right: 15px; /* Space for scrollbar */
+    margin-bottom: 15px; /* Space above the close button */
+    text-align: left; /* Align text within the scrollable area */
+}
+
+#rules-content-scroll p {
+    font-size: 14px;
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+#rules-content-scroll h3 {
+    font-size: 18px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: #0f0;
+    text-shadow: 0 0 5px #0f0;
+}
+
+#rules-content-scroll ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+#rules-content-scroll ul li {
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+#rules-overlay .close-button {
+    background: none;
+    border: 2px solid #0f0;
+    color: #0f0;
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+    /* margin-top: 20px; Removed as flex handles spacing */
+}
+
+#rules-overlay .close-button:hover {
+    background: #0f0;
+    color: #000;
+    box-shadow: 0 0 15px #0f0;
+    transform: scale(1.05);
+}
+</style>
+</head>
+<body>
+<div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="hud">
+        <div id="corruption-meter"><div id="corruption-fill"></div></div>
+        <div id="dimension-indicator">Dimension: <span id="dimension-name">Prime Reality</span></div>
+        <div id="status-text">System stable. No anomalies detected.</div>
+    </div>
+
+    <div id="intro-screen">
+        <h1 id="title">🎮 Glitch Pilgrim</h1>
+        <h2 id="subtitle">SYSTEM SHOCK</h2> <!-- NEW SUBTITLE -->
+        <p style="font-size:12px;margin-bottom:20px;max-width:600px;text-align:center">
+            Traverse a world collapsing into corruption — glitches are portals to forgotten modes of being.
+        </p>
+        <p id="high-score-display" style="font-size:10px;margin-bottom:10px;">Best run: 00:00</p>
+        <button id="start-button">ENTER THE GLITCH</button>
+        <button id="rules-button">GAME RULES</button> <!-- NEW RULES BUTTON -->
+        <div id="mutator-container">
+            <label for="mutator-select">Mutator:</label>
+            <select id="mutator-select">
+                <option value="0">Normal</option>
+                <option value="1">Mirror Start</option>
+                <option value="2">Double Speed</option>
+            </select>
+        </div>
+    </div>
+
+    <button id="mute-button">🔊</button>
+
+    <!-- NEW RULES OVERLAY -->
+    <div id="rules-overlay" class="hidden">
+        <h2>Game Rules</h2>
+        <div id="rules-content-scroll"> <!-- Scrollable content container -->
+            <p>Welcome, Pilgrim! Your mission is to survive as long as possible in a reality constantly threatened by corruption. Avoid the glitches to keep your system stable.</p>
+            <h3>Objective:</h3>
+            <p>Survive for the longest time without reaching 100% corruption. Your best run is tracked!</p>
+            <h3>Controls:</h3>
+            <ul>
+                <li><strong>Arrow Keys (Up, Down, Left, Right):</strong> Move your Pilgrim.</li>
+                <li><strong>Double-Tap Arrow Key:</strong> Use "Blink" to teleport a short distance (costs 5% corruption).</li>
+                <li><strong>Hold Spacebar:</strong> Activate "Slow-Mo" to temporarily slow down time (use strategically!).</li>
+            </ul>
+            <h3>Corruption & Dimensions:</h3>
+            <p>Your corruption meter increases when you collide with glitches. As corruption rises, reality shifts, taking you to new dimensions with unique rules and challenges:</p>
+            <ul>
+                <li><strong>Prime Reality (0-19%):</strong> Standard physics.</li>
+                <li><strong>Mirror Dimension (20-39%):</strong> Inverted controls!</li>
+                <li><strong>Pixel Decay (40-59%):</strong> Reality fragments, visual distortions.</li>
+                <li><strong>Void Sector (60-69%):</strong> No boundaries, wrap around the screen.</li>
+                <li><strong>Chromatic Shear (70-79%):</strong> Trust the green ghost for collisions.</li>
+                <li><strong>Code Overflow (80-89%):</strong> Random teleportation.</li>
+                <li><strong>Root Sector (90-100%):</strong> Critical state, glitches spawn from corners. Survive for a short duration to reset corruption!</li>
+            </ul>
+            <h3>Power-Ups:</h3>
+            <p>Collect white cubes for temporary buffs:</p>
+            <ul>
+                <li><strong>Firewall:</strong> Absorbs one glitch hit.</li>
+                <li><strong>Haste:</strong> Increases your speed.</li>
+                <li><strong>Purge:</strong> Reduces your current corruption.</li>
+            </ul>
+        </div>
+        <button class="close-button">CLOSE</button>
+    </div>
+</div>
+
+<script>
+console.log("Script block started."); // Very early log
+
+// Global error handler for debugging
+window.onerror = function(message, source, lineno, colno, error) {
+    console.error("Uncaught JavaScript Error:", {
+        message: message,
+        source: source,
+        lineno: lineno,
+        colno: colno,
+        error: error
+    });
+    // Attempt to display error on screen if statusText is available
+    const statusEl = document.getElementById('status-text');
+    if (statusEl) {
+        statusEl.textContent = `ERROR: ${message.substring(0, 100)}... at line ${lineno}`;
+        statusEl.style.color = 'red';
+    }
+    return true; // Prevent default error handling
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM Content Loaded. Script is starting.");
+
+    /* ---------- Configuration Constants ---------- */
+    const ABILITIES_ON = true; // Toggle micro-abilities on/off
+
+    /* ---------- basic setup ---------- */
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const intro = document.getElementById('intro-screen');
+    const startBtn = document.getElementById('start-button');
+    const rulesBtn = document.getElementById('rules-button'); // New rules button
+    const rulesOverlay = document.getElementById('rules-overlay'); // New rules overlay
+    const closeRulesBtn = rulesOverlay.querySelector('.close-button'); // Close button in rules overlay
+    const muteBtn = document.getElementById('mute-button');
+    const corruptionFill = document.getElementById('corruption-fill');
+    const dimName = document.getElementById('dimension-name');
+    const statusText = document.getElementById('status-text');
+    const hud = document.getElementById('hud');
+    const highScoreDisplay = document.getElementById('high-score-display');
+    const mutatorSelect = document.getElementById('mutator-select');
+    const gameContainer = document.getElementById('game-container'); // Get game container for effects
+
+    // Verify elements are found
+    if (!canvas) console.error("Error: canvas element not found!");
+    if (!startBtn) console.error("Error: start-button element not found!");
+    if (!rulesBtn) console.error("Error: rules-button element not found!"); // Check rules button
+    if (!rulesOverlay) console.error("Error: rules-overlay element not found!"); // Check rules overlay
+    if (!closeRulesBtn) console.error("Error: close-button in rules overlay not found!"); // Check close rules button
+    if (!intro) console.error("Error: intro-screen element not found!");
+    if (!muteBtn) console.error("Error: mute-button element not found!");
+    if (!gameContainer) console.error("Error: game-container element not found!");
+
+    // Function to resize the canvas to fit the window
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize(); // Initial resize
+
+    /* ---------- game state ---------- */
+    let active = false; // Is the game active?
+    let corruption = 10; // Current corruption level (0-100)
+    let dimension = 0; // Current dimension index
+    let player = { x: 0, y: 0, w: 20, h: 20, speed: 4, color: '#0f0' }; // Player properties
+    let keys = {}; // Object to track pressed keys
+    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].forEach(k => keys[k] = false); // Added Space for Slow-Mo
+
+    // Definitions for different dimensions
+    const dims = [
+        { name: 'Prime Reality', color: '#0f0', rules: 'Standard physics' },
+        { name: 'Mirror Dimension', color: '#f0f', rules: 'Inverted controls' },
+        { name: 'Pixel Decay', color: '#ff0', rules: 'Reality fragments' },
+        { name: 'Void Sector', color: '#fff', rules: 'No boundaries' },
+        { name: 'Chromatic Shear', color: '#f0f', rules: 'Trust the green ghost' }, // NEW DIMENSION
+        { name: 'Code Overflow', color: '#0ff', rules: 'Reality loops' },
+        { name: 'Root Sector', color: '#ff0', rules: 'Survive the corners' } // NEW DIMENSION
+    ];
+
+    let glitches = []; // Array to store glitch objects
+    let particles = []; // Array to store particle effects
+
+    // Audio variables
+    let audioCtx = null; // Initialize to null
+    let osc = null;      // Initialize to null
+    let gain = null;     // Initialize to null
+    let muted = false;
+    let melodyNotes = [261.63, 329.63, 392.00, 523.25];
+    let currentNoteIndex = 0;
+    let melodyIntervalId;
+
+    // System Shock event variables
+    let lastSystemShockTime = 0;
+    const SYSTEM_SHOCK_COOLDOWN = 10000; // 10 seconds
+
+    // Variables for Code Overflow / Root Sector dimension timer
+    let specialDimensionTimer = 0; // Tracks time spent in Code Overflow or Root Sector
+    const codeOverflowDuration = 15; // Duration in seconds for Code Overflow
+    const rootSectorDuration = 10; // Duration in seconds for Root Sector
+    let specialDimensionActive = false; // True if special dimension timer is running
+    let lastFrameTime = 0; // For calculating deltaTime
+
+    // Safe zone variables
+    const safeZoneDuration = 3; // Duration of the safe zone in seconds (Increased for testing)
+    let safeZoneTimer = 0; // Tracks time spent in the safe zone
+    let inSafeZone = false; // True if currently in the safe zone
+
+    // Time-based challenge increases
+    let timeSinceLowCorruptionStart = 0; // Tracks time corruption is below 50
+    let lastGlitchCountIncreaseTime = 0; // Last time max glitches were increased
+    let lastGlitchSpeedIncreaseTime = 0;
+    let maxGlitchesBonus = 0; // Additional max glitches due to low corruption
+    let glitchSpeedMultiplier = 1.0; // Multiplier for glitch speed due to low corruption
+
+    // Micro-Ability variables
+    let lastTapTime = {}; // For double-tap detection {key: timestamp}
+    const DOUBLE_TAP_THRESHOLD = 300; // ms for double tap
+    let slowMoActive = false;
+    let gameSpeedFactor = 1.0; // Overall game speed multiplier
+
+    // Power-Cube variables
+    let powerCube = null;
+    let powerCubeSpawnTimer = 0;
+    const POWER_CUBE_SPAWN_INTERVAL = 20; // seconds
+    const POWER_CUBE_DISPLAY_DURATION = 4; // seconds
+    let currentBuff = null; // {type: string, duration: number, timer: number}
+    let isFirewallActive = false;
+    let playerSpeedBuff = 1.0;
+
+    // High Score variables
+    let startTime = 0;
+    let bestRunTime = localStorage.getItem("glitchPilgrimBestRun") || 0;
+
+    // Flag to track if user has interacted, to enable audio
+    let hasUserInteracted = false;
+
+    /* ---------- audio ---------- */
+    // Initializes the Web Audio API context and nodes, connecting them but keeping gain low.
+    // This function is designed to be called ONCE on the very first user interaction.
+    function initAudioSystem() {
+        if (audioCtx && audioCtx.state !== 'closed') {
+            console.log("Audio system already initialized.");
+            return; // Prevent re-initialization if already done
+        }
+
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            osc = audioCtx.createOscillator();
+            gain = audioCtx.createGain();
+
+            osc.type = 'triangle';
+            gain.gain.value = 0.0001; // Start almost silent to avoid pops
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(0); // Start the oscillator immediately
+
+            console.log("Audio system nodes created and connected (silent).");
+
+            // Attempt to resume context if suspended (needed for autoplay policies)
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    console.log('AudioContext resumed successfully by initAudioSystem.');
+                }).catch(e => {
+                    console.error('Failed to resume AudioContext in initAudioSystem:', e);
+                });
+            }
+        } catch (e) {
+            console.error('Audio system initialization failed:', e);
+        }
+    }
+
+    // Determines the tempo of the melody based on corruption level
+    function getMelodyTempo() {
+        return Math.max(150, 400 - corruption * 3);
+    }
+
+    // Starts or restarts the in-game melody playback loop
+    function startMelodyLoop() {
+        if (!audioCtx || audioCtx.state !== 'running') {
+            console.warn("Cannot start melody loop: AudioContext not running.");
+            return;
+        }
+
+        if (melodyIntervalId) clearInterval(melodyIntervalId);
+        melodyIntervalId = setInterval(playMelody, getMelodyTempo());
+        // Set audible volume only if not muted
+        gain.gain.setValueAtTime(muted ? 0.0001 : 0.05, audioCtx.currentTime);
+        console.log("Melody loop started.");
+    }
+
+    // Plays the next note in the defined in-game melody
+    function playMelody() {
+        if (!active || !osc || !audioCtx || audioCtx.state !== 'running') {
+            if (gain) gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+            return;
+        }
+        if (muted) { // If muted, keep gain very low
+             if (gain) gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+             return;
+        }
+
+        const baseFreq = melodyNotes[currentNoteIndex];
+        osc.frequency.setValueAtTime(baseFreq + corruption * 0.5, audioCtx.currentTime);
+
+        const now = audioCtx.currentTime;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.linearRampToValueAtTime(0.02, now + 0.1);
+        gain.gain.linearRampToValueAtTime(0.0001, now + 0.3);
+
+        currentNoteIndex = (currentNoteIndex + 1) % melodyNotes.length;
+    }
+
+    // Plays a short, softer glitch sound effect
+    function glitchSound() {
+        // Glitch sound should play even if main music is muted, but only if audioCtx is running
+        if (!audioCtx || audioCtx.state !== 'running') return;
+
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+
+        o.type = 'sine';
+        o.frequency.value = 200 + Math.random() * 300;
+        g.gain.value = 0.08; // This is the volume for the glitch sound effect
+
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start();
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        setTimeout(() => o.stop(), 300);
+    }
+
+    // Triggers the "System Shock" event with voice and visual effects
+    function triggerSystemShock() {
+        if (!window.speechSynthesis) {
+            console.warn("SpeechSynthesis API not available.");
+            return;
+        }
+
+        console.log("Attempting to trigger System Shock speech.");
+        lastSystemShockTime = Date.now();
+        window.speechSynthesis.cancel(); // Clear any ongoing speech
+
+        const phrase = 'System Shock';
+        const numRepeats = 3;
+        const delayBetweenRepeats = 500; // milliseconds
+
+        for (let i = 0; i < numRepeats; i++) {
+            setTimeout(() => {
+                const u = new SpeechSynthesisUtterance(phrase);
+                u.pitch = 0.3;
+                u.rate = 0.7;
+                u.volume = 0.8;
+                window.speechSynthesis.speak(u);
+                console.log(`Spoke "${phrase}" (repetition ${i + 1})`);
+            }, i * delayBetweenRepeats);
+        }
+
+        // Add visual effect to game container (only if audioCtx is running, for consistency)
+        if (audioCtx && audioCtx.state === 'running') {
+            gameContainer.classList.add('system-shock-effect');
+            setTimeout(() => {
+                gameContainer.classList.remove('system-shock-effect');
+            }, 1500);
+        }
+
+        statusText.textContent = "CRITICAL: SYSTEM SHOCK! Reality integrity compromised.";
+        setTimeout(() => {
+            if (statusText.textContent === "CRITICAL: SYSTEM SHOCK! Reality integrity compromised.") {
+                statusText.textContent = 'Rules: ' + dims[dimension].rules;
+            }
+        }, 3000);
+    }
+
+    /* ---------- world objects ---------- */
+    // Spawns a new glitch object at a random position
+    function spawnGlitch() {
+        console.log("Spawning glitch."); // Debugging log
+        const size = 20 + Math.random() * 40; // Random size for glitches
+
+        // Calculate dynamic glitch speed based on corruption
+        const minGlitchSpeed = 1.5;
+        const maxGlitchSpeed = 8;
+        const corruptionRange = 95;
+        const corruptionNormalized = corruption - 5;
+        let currentGlitchSpeed = minGlitchSpeed + ((corruptionNormalized / corruptionRange) * (maxGlitchSpeed - minGlitchSpeed));
+        currentGlitchSpeed = Math.max(minGlitchSpeed, Math.min(maxGlitchSpeed, currentGlitchSpeed));
+
+        let spawnX, spawnY;
+        // Root Sector (dimension 6): spawn from corners only
+        if (dimension === 6) {
+            const corner = Math.floor(Math.random() * 4);
+            if (corner === 0) { spawnX = 0; spawnY = 0; } // Top-left
+            else if (corner === 1) { spawnX = canvas.width - size; spawnY = 0; } // Top-right
+            else if (corner === 2) { spawnX = 0; spawnY = canvas.height - size; } // Bottom-left
+            else { spawnX = canvas.width - size; spawnY = canvas.height - size; } // Bottom-right
+        } else {
+            spawnX = Math.random() * canvas.width;
+            spawnY = Math.random() * canvas.height;
+        }
+
+        glitches.push({
+            x: spawnX,
+            y: spawnY,
+            w: size, h: size,
+            vx: (Math.random() - 0.5) * 2 * currentGlitchSpeed * glitchSpeedMultiplier,
+            vy: (Math.random() - 0.5) * 2 * currentGlitchSpeed * glitchSpeedMultiplier,
+            phase: Math.random() * Math.PI * 2, // For visual glitch animation
+            color: dims[Math.floor(Math.random() * dims.length)].color // Color based on a random dimension
+        });
+    }
+
+    // Adds a particle effect at a given position
+    function addParticle(x, y, color) {
+        particles.push({
+            x, y,
+            size: Math.random() * 4 + 2, // Random size
+            vx: (Math.random() - 0.5) * 6, // Random horizontal velocity
+            vy: (Math.random() - 0.5) * 6, // Random vertical velocity
+            color,
+            life: 30 // Particle lifespan
+        });
+    }
+
+    // Updates the position and lifespan of all active particles
+    function updateParticles() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx * gameSpeedFactor; // Apply game speed factor
+            p.y += p.vy * gameSpeedFactor; // Apply game speed factor
+            p.life--;
+            if (p.life <= 0) particles.splice(i, 1); // Remove dead particles
+        }
+    }
+
+    // Spawns a power cube
+    function spawnPowerCube() {
+        if (powerCube) return; // Only one power cube at a time
+
+        const size = 15;
+        const buffTypes = ['Firewall', 'Haste', 'Purge'];
+        const randomBuffType = buffTypes[Math.floor(Math.random() * buffTypes.length)];
+
+        powerCube = {
+            x: Math.random() * (canvas.width - size),
+            y: Math.random() * (canvas.height - size),
+            w: size, h: size,
+            color: '#fff', // White color
+            life: POWER_CUBE_DISPLAY_DURATION, // seconds
+            buffType: randomBuffType
+        };
+    }
+
+    /* ---------- draw ---------- */
+    // Draws the game background, including a grid for Prime Reality
+    function drawBackground() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        /* Grid for Prime Reality */
+        if (dimension === 0) {
+            ctx.strokeStyle = '#002200';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 32) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 32) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+    }
+
+    // Draws all active glitch objects with a visual distortion effect
+    function drawGlitches() {
+        glitches.forEach(g => {
+            g.phase += 0.02 * gameSpeedFactor; // Apply game speed factor
+            const off = Math.sin(g.phase) * 4; // Offset for glitch effect
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen'; // Blending mode for visual effect
+
+            // Chromatic Shear dimension (index 4)
+            if (dimension === 4) {
+                // Draw red channel
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                ctx.fillRect(g.x + off + 2, g.y + off, g.w, g.h);
+                // Draw blue channel
+                ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+                ctx.fillRect(g.x + off - 2, g.y + off, g.w, g.h);
+                // Green channel (for collision, drawn last to be on top visually)
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                ctx.fillRect(g.x + off, g.y + off, g.w, g.h); // This is the 'real' glitch position for collision
+            } else {
+                ctx.fillStyle = g.color;
+                for (let i = 0; i < 3; i++) {
+                    ctx.globalAlpha = 0.3; // Semi-transparent layers
+                    ctx.fillRect(g.x + off * i, g.y + off * i, g.w, g.h);
+                }
+            }
+            ctx.restore();
+        });
+    }
+
+    // Draws the player character
+    function drawPlayer() {
+        ctx.fillStyle = player.color;
+        // Add a corruption visual effect to the player if corruption is high
+        if (corruption > 50) {
+            const off = Math.sin(Date.now() / 100) * (corruption / 10);
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            ctx.fillStyle = '#f0f'; // Magenta layer
+            ctx.fillRect(player.x + off, player.y, player.w, player.h);
+            ctx.fillStyle = '#0ff'; // Cyan layer
+            ctx.fillRect(player.x - off, player.y, player.w, player.h);
+            ctx.restore();
+        }
+        ctx.fillRect(player.x, player.y, player.w, player.h);
+    }
+
+    // Draws all active particle effects
+    function drawParticles() {
+        particles.forEach(p => {
+            ctx.globalAlpha = p.life / 30; // Fade out as life decreases
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+        });
+        ctx.globalAlpha = 1; // Reset global alpha
+    }
+
+    // Draws the power cube
+    function drawPowerCube() {
+        if (!powerCube) return;
+        ctx.save();
+        ctx.globalAlpha = powerCube.life / POWER_CUBE_DISPLAY_DURATION; // Fade out
+        ctx.fillStyle = powerCube.color;
+        ctx.fillRect(powerCube.x, powerCube.y, powerCube.w, powerCube.h);
+        ctx.restore();
+    }
+
+    /* ---------- update ---------- */
+    // Updates the player's position based on key presses and current dimension rules
+    function updatePlayer() {
+        let speed = player.speed * playerSpeedBuff; // Apply haste buff
+        if (dimension === 1) { // Mirror Dimension: inverted controls
+            if (keys.ArrowUp) player.y += speed * gameSpeedFactor;
+            if (keys.ArrowDown) player.y -= speed * gameSpeedFactor;
+            if (keys.ArrowLeft) player.x += speed * gameSpeedFactor;
+            if (keys.ArrowRight) player.x += speed * gameSpeedFactor;
+        } else { // Standard controls for other dimensions
+            if (keys.ArrowUp) player.y -= speed * gameSpeedFactor;
+            if (keys.ArrowDown) player.y += speed * gameSpeedFactor;
+            if (keys.ArrowLeft) player.x -= speed * gameSpeedFactor;
+            if (keys.ArrowRight) player.x += speed * gameSpeedFactor;
+        }
+
+        // Boundary checks, or wrapping for Void Sector
+        if (dimension !== 3) { // Not Void Sector: clamp to screen edges
+            player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+            player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+        } else { // Void Sector: wrap around screen
+            if (player.x < 0) player.x = canvas.width;
+            if (player.x > canvas.width) player.x = 0;
+            if (player.y < 0) player.y = canvas.height;
+            if (player.y > canvas.height) player.y = 0;
+        }
+
+        // Code Overflow dimension: random teleportation
+        if (dimension === 5 && Math.random() < 0.02 * gameSpeedFactor) { // Apply game speed factor
+            player.x = Math.random() * canvas.width;
+            player.y = Math.random() * canvas.height;
+            addParticle(player.x, player.y, '#0ff'); // Add particles on teleport
+
+            statusText.textContent = "Reality shifted! Teleporting...";
+            setTimeout(() => {
+                if (statusText.textContent === "Reality shifted! Teleporting.") { // Check if still the same message
+                    statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                }
+            }, 1000);
+        }
+        player.color = dims[dimension].color; // Update player color based on current dimension
+    }
+
+    // Updates the position of glitches and handles collisions with the player
+    function updateGlitches() {
+        glitches.forEach((g, idx) => {
+            g.x += g.vx * gameSpeedFactor; // Apply game speed factor
+            g.y += g.vy * gameSpeedFactor; // Apply game speed factor
+
+            // Bounce off walls
+            if (g.x < 0 || g.x > canvas.width) g.vx *= -1;
+            if (g.y < 0 || g.y > canvas.height) g.vy *= -1;
+
+            // Collision detection with player
+            let glitchX = g.x;
+            let glitchY = g.y;
+
+            // For Chromatic Shear, collision is only with the green channel's position
+            if (dimension === 4) {
+                const off = Math.sin(g.phase) * 4;
+                glitchX = g.x + off;
+                glitchY = g.y + off;
+            }
+
+            if (player.x < glitchX + g.w && player.x + player.w > glitchX &&
+                player.y < glitchY + g.h && player.y + player.h > glitchY) {
+
+                if (isFirewallActive) {
+                    isFirewallActive = false; // Consume firewall
+                    statusText.textContent = "Firewall activated! Hit absorbed.";
+                    setTimeout(() => {
+                        if (statusText.textContent === "Firewall activated! Hit absorbed.") {
+                            statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                        }
+                    }, 2000);
+                } else {
+                    corruption = Math.min(100, corruption + 0.2); // Corruption gain reduced from 0.5 to 0.2
+                }
+                updateCorruption(); // Update HUD and dimension
+                glitchSound(); // Play glitch sound effect
+            }
+        });
+    }
+
+    // Updates the corruption meter and changes dimensions based on corruption level
+    function updateCorruption() {
+        corruption = Math.max(0, Math.min(100, corruption)); // Clamp corruption between 0 and 100
+        corruptionFill.style.width = corruption + '%'; // Update visual fill of meter
+
+        let newDim;
+        if (corruption >= 90) newDim = 6; // Root Sector (90-100)
+        else if (corruption >= 80) newDim = 5; // Code Overflow (80-89)
+        else if (corruption >= 70) newDim = 4; // Chromatic Shear (70-79)
+        else if (corruption >= 60) newDim = 3; // Void Sector (60-69)
+        else if (corruption >= 40) newDim = 2; // Pixel Decay (40-59)
+        else if (corruption >= 20) newDim = 1; // Mirror Dimension (20-39)
+        else newDim = 0; // Prime Reality (0-19)
+
+        if (newDim !== dimension) {
+            // Trigger System Shock specifically when entering Root Sector (dimension 6)
+            if (newDim === 6 && (Date.now() - lastSystemShockTime > SYSTEM_SHOCK_COOLDOWN)) {
+                triggerSystemShock();
+            }
+
+            dimension = newDim; // Change dimension
+            dimName.textContent = dims[dimension].name; // Update dimension name in HUD
+            statusText.textContent = 'Rules: ' + dims[dimension].rules; // Update rules in HUD
+            addParticle(canvas.width / 2, canvas.height / 2, dims[dimension].color); // Add particles for dimension change
+
+            // Handle special dimension timers
+            if (dimension === 5 || dimension === 6) { // Code Overflow or Root Sector
+                specialDimensionActive = true;
+                specialDimensionTimer = 0; // Reset timer
+                statusText.textContent = `Entering ${dims[dimension].name}: ${dims[dimension].rules}`;
+                setTimeout(() => {
+                    if (statusText.textContent === `Entering ${dims[dimension].name}: ${dims[dimension].rules}`) { // Check if still the same message
+                        statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                    }
+                }, 2000);
+            } else {
+                specialDimensionActive = false;
+            }
+
+            // When dimension changes, the melody tempo might need to be adjusted
+            if (active && audioCtx) {
+                startMelodyLoop(); // Restart the melody loop to apply new tempo
+            }
+        }
+        // Apply 'corrupted' class to HUD if corruption is high
+        hud.classList.toggle('corrupted', corruption > 50);
+
+        // Game Over condition: If corruption hits 100% and not in Root Sector
+        if (corruption >= 100 && dimension !== 6) {
+            endGame();
+        }
+    }
+
+    // Checks for collision between two rectangles
+    function checkCollision(rect1, rect2) {
+        return rect1.x < rect2.x + rect2.w &&
+               rect1.x + rect1.w > rect2.x &&
+               rect1.y < rect2.y + rect2.h &&
+               rect1.y + rect1.h > rect2.y;
+    }
+
+    // Applies a collected power-up buff
+    function applyBuff(type) {
+        // Clear any existing buff timer/effect before applying new one
+        if (currentBuff) {
+            clearTimeout(currentBuff.timeoutId);
+            // Reset previous buff effects if active
+            if (currentBuff.type === 'Haste') playerSpeedBuff = 1.0;
+            if (currentBuff.type === 'Firewall') isFirewallActive = false;
+        }
+
+        const buffDuration = 8; // seconds
+        currentBuff = { type: type, duration: buffDuration, timer: 0 };
+
+        statusText.textContent = `Buff: ${type} active for ${buffDuration}s!`;
+
+        switch (type) {
+            case 'Firewall':
+                isFirewallActive = true;
+                break;
+            case 'Haste':
+                playerSpeedBuff = 1.5;
+                break;
+            case 'Purge':
+                corruption = Math.max(0, corruption - 15);
+                updateCorruption();
+                statusText.textContent = `Buff: Purge! Corruption -15%.`;
+                // Purge is instant, so no long-running buff effect or timer needed for it
+                currentBuff = null; // Clear instant buff immediately
+                break;
+        }
+
+        if (currentBuff) { // Only set timeout for non-instant buffs
+            currentBuff.timeoutId = setTimeout(() => {
+                if (currentBuff && currentBuff.type === type) { // Ensure it's still the same buff
+                    statusText.textContent = `${type} buff expired.`;
+                    setTimeout(() => {
+                        if (statusText.textContent === `${type} expired.`) { // Check if still the same message
+                            statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                        }
+                    }, 1000);
+                    if (type === 'Haste') playerSpeedBuff = 1.0;
+                    if (type === 'Firewall') isFirewallActive = false;
+                    currentBuff = null;
+                }
+            }, buffDuration * 1000);
+        }
+    }
+
+    /* ---------- initialization ---------- */
+    // Initializes game elements before the main loop starts
+    function initGame() {
+        // Set initial player position to the center of the canvas
+        player.x = canvas.width / 2;
+        player.y = canvas.height / 2;
+        player.speed = 4; // Reset base speed
+
+        // Clear any existing glitches for the safe zone
+        glitches = [];
+        particles = [];
+        powerCube = null;
+        currentBuff = null;
+        isFirewallActive = false;
+        playerSpeedBuff = 1.0;
+
+        // Activate safe zone
+        inSafeZone = true;
+        safeZoneTimer = 0;
+        statusText.textContent = "Safe Zone Active!";
+        console.log(`Safe zone activated. Duration: ${safeZoneDuration} seconds.`); // Debugging log
+        setTimeout(() => {
+            if (statusText.textContent === "Safe Zone Active!") { // Check if still the same message
+                statusText.textContent = 'Rules: ' + dims[dimension].rules;
+            }
+        }, safeZoneDuration * 1000);
+
+        // Reset challenge variables
+        timeSinceLowCorruptionStart = 0;
+        lastGlitchCountIncreaseTime = 0;
+        lastGlitchSpeedIncreaseTime = 0;
+        maxGlitchesBonus = 0;
+        glitchSpeedMultiplier = 1.0;
+        gameSpeedFactor = 1.0; // Reset game speed factor
+
+        // Reset corruption and dimension
+        corruption = 10;
+        dimension = 0;
+        updateCorruption(); // Initial HUD sync
+
+        // Apply mutator settings
+        const selectedMutator = mutatorSelect.value;
+        if (selectedMutator === '1') { // Mirror Start
+            dimension = 1;
+            updateCorruption(); // Forces dimension change and HUD update
+            statusText.textContent = "Mutator: Mirror Start!";
+            setTimeout(() => {
+                if (statusText.textContent === "Mutator: Mirror Start!") { // Check if still the same message
+                    statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                }
+            }, 2000);
+        } else if (selectedMutator === '2') { // Double Speed
+            player.speed *= 2;
+            glitchSpeedMultiplier *= 2;
+            statusText.textContent = "Mutator: Double Speed!";
+            setTimeout(() => {
+                if (statusText.textContent === "Mutator: Double Speed!") { // Check if still the same message
+                    statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                }
+            }, 2000);
+        }
+
+        // Initialize high score tracking
+        startTime = Date.now();
+        displayHighScore();
+    }
+
+    // Ends the game session
+    function endGame() {
+        active = false;
+        if (melodyIntervalId) clearInterval(melodyIntervalId);
+        // Only attempt to stop audio if context and nodes exist and are running
+        if (audioCtx && audioCtx.state === 'running' && gain) {
+            // Smoothly fade out the music instead of abrupt stop
+            gain.gain.cancelScheduledValues(audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5); // Fade out over 0.5 seconds
+            // Disconnect after fade out
+            setTimeout(() => {
+                if (gain && audioCtx.destination) {
+                    gain.disconnect(audioCtx.destination);
+                }
+            }, 500); // Disconnect after fade duration
+        }
+        statusText.textContent = "Game Over! Reality collapsed.";
+        intro.classList.remove('hidden'); // Show intro screen again
+
+        const currentRunTime = Date.now() - startTime;
+        if (currentRunTime > bestRunTime) {
+            bestRunTime = currentRunTime;
+            localStorage.setItem("glitchPilgrimBestRun", bestRunTime);
+            highScoreDisplay.textContent = `NEW BEST! ${formatTime(bestRunTime)}`;
+        } else {
+            displayHighScore(); // Display current best if not a new high score
+        }
+        // Reset mutator to normal for next game
+        mutatorSelect.value = "0";
+    }
+
+    // Formats milliseconds into MM:SS string
+    function formatTime(ms) {
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+    }
+
+    // Displays the high score on the intro screen
+    function displayHighScore() {
+        highScoreDisplay.textContent = `Best run: ${formatTime(bestRunTime)}`;
+    }
+
+    /* ---------- loop ---------- */
+    // Main game loop, continuously updates and draws game elements
+    function loop() {
+        if (!active) return; // Stop loop if game is not active
+
+        const now = Date.now();
+        // Apply slow-mo effect to deltaTime
+        const rawDeltaTime = (now - lastFrameTime) / 1000;
+        let deltaTime = rawDeltaTime;
+        if (slowMoActive) {
+            deltaTime *= 0.5; // 50% game speed reduction
+            gameSpeedFactor = 0.5;
+        } else {
+            gameSpeedFactor = 1.0;
+        }
+        lastFrameTime = now;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+
+        // Update game elements
+        updatePlayer();
+        updateGlitches();
+        updateParticles();
+
+        // Handle safe zone timer
+        if (inSafeZone) {
+            safeZoneTimer += rawDeltaTime; // Use rawDeltaTime for real-world time
+            console.log(`Safe zone active. Timer: ${safeZoneTimer.toFixed(2)}s / ${safeZoneDuration}s`); // Debugging log
+            if (safeZoneTimer >= safeZoneDuration) {
+                inSafeZone = false;
+                console.log("Safe zone ended. Glitches will now spawn."); // Debugging log
+                for(let i = 0; i < 3; i++) {
+                    spawnGlitch();
+                }
+            }
+        }
+
+        // Handle Code Overflow / Root Sector timer
+        if (specialDimensionActive) {
+            specialDimensionTimer += rawDeltaTime; // Use rawDeltaTime for real-world time
+            let duration = (dimension === 5) ? codeOverflowDuration : rootSectorDuration;
+            if (specialDimensionTimer >= duration) {
+                if (dimension === 6) { // Root Sector: reset to Prime Reality at 0% corruption
+                    corruption = 0;
+                    updateCorruption(); // This will transition to Prime Reality
+                    statusText.textContent = "Root Sector survived! Reality reset.";
+                } else if (dimension === 5) { // Code Overflow: reset corruption to 10%
+                    corruption = 10;
+                    updateCorruption(); // This will transition back to Prime Reality
+                    statusText.textContent = "Reality stabilized. Returning to Prime Reality.";
+                }
+                specialDimensionActive = false; // Stop the timer
+                setTimeout(() => {
+                    if (statusText.textContent === "Root Sector survived! Reality reset." || statusText.textContent === "Reality stabilized. Returning to Prime Reality.") { // Check if still the same message
+                        statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                    }
+                }, 3000);
+            }
+        }
+
+        // Time-based challenge increases when corruption is below 50
+        if (corruption < 50 && !inSafeZone) {
+            timeSinceLowCorruptionStart += rawDeltaTime; // Use rawDeltaTime
+
+            // Glitch Count Increase: Every 30 seconds
+            if (timeSinceLowCorruptionStart - lastGlitchCountIncreaseTime >= 30) {
+                maxGlitchesBonus += 3;
+                lastGlitchCountIncreaseTime = timeSinceLowCorruptionStart;
+                statusText.textContent = `Anomaly detected: Glitch density increasing! (+3 max glitches)`;
+                setTimeout(() => {
+                    if (statusText.textContent === `Anomaly detected: Glitch density increasing! (+3 max glitches)`) {
+                        statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                    }
+                }, 3000);
+            }
+
+            // Glitch Speed Increase: Every 60 seconds
+            if (timeSinceLowCorruptionStart - lastGlitchSpeedIncreaseTime >= 60) {
+                glitchSpeedMultiplier *= 1.1; // 10% faster
+                lastGlitchSpeedIncreaseTime = timeSinceLowCorruptionStart;
+                statusText.textContent = `System instability: Glitches accelerating! (+10% speed)`;
+                setTimeout(() => {
+                    if (statusText.textContent === `System instability: Glitches accelerating! (+10% speed)`) {
+                        statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                    }
+                }, 3000);
+            }
+        } else {
+            // Reset timers if corruption goes above 50 or in safe zone
+            timeSinceLowCorruptionStart = 0;
+            lastGlitchCountIncreaseTime = 0;
+            lastGlitchSpeedIncreaseTime = 0;
+        }
+
+        // Power-Cube logic
+        if (!inSafeZone) {
+            powerCubeSpawnTimer += rawDeltaTime; // Use rawDeltaTime
+            if (powerCubeSpawnTimer >= POWER_CUBE_SPAWN_INTERVAL && !powerCube) {
+                spawnPowerCube();
+                powerCubeSpawnTimer = 0;
+            }
+
+            if (powerCube) {
+                powerCube.life -= rawDeltaTime; // Use rawDeltaTime
+                if (powerCube.life <= 0) {
+                    powerCube = null; // Remove expired cube
+                } else if (checkCollision(player, powerCube)) {
+                    applyBuff(powerCube.buffType);
+                    powerCube = null; // Remove collected cube
+                }
+            }
+        }
+
+        // Draw game elements
+        drawBackground();
+        drawGlitches();
+        drawPlayer();
+        drawParticles();
+        drawPowerCube(); // Draw the power cube if it exists
+
+        // Dynamically adjust the number of glitches based on corruption
+        if (!inSafeZone) {
+            const minGlitches = 3;
+            const baseMaxGlitches = 25;
+            const maxGlitches = baseMaxGlitches + maxGlitchesBonus;
+
+            const corruptionRange = 95;
+            const corruptionNormalized = corruption - 5;
+            let targetGlitches = maxGlitches - Math.floor((corruptionNormalized / corruptionRange) * (maxGlitches - minGlitches));
+            targetGlitches = Math.max(minGlitches, Math.min(maxGlitches, targetGlitches));
+
+            while(glitches.length < targetGlitches) {
+                spawnGlitch();
+            }
+        }
+
+        requestAnimationFrame(loop); // Request next frame for smooth animation
+    }
+
+    /* ---------- events ---------- */
+    // Event listener for keydown events to track player movement and abilities
+    window.addEventListener('keydown', (e) => {
+        if (keys.hasOwnProperty(e.key)) {
+            keys[e.key] = true;
+            e.preventDefault(); // Prevent default browser actions (e.g., scrolling)
+
+            if (ABILITIES_ON) {
+                const now = Date.now();
+                // Blink ability (double-tap)
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    if (lastTapTime[e.key] && (now - lastTapTime[e.key] < DOUBLE_TAP_THRESHOLD)) {
+                        if (corruption >= 5) { // Cost 5% corruption
+                            corruption -= 5;
+                            updateCorruption();
+                            let teleportDistance = player.w * 3; // 3-cell teleport
+                            switch (e.key) {
+                                case 'ArrowUp': player.y -= teleportDistance; break;
+                                case 'ArrowDown': player.y += teleportDistance; break;
+                                case 'ArrowLeft': player.x -= teleportDistance; break;
+                                case 'ArrowRight': player.x += teleportDistance; break;
+                            }
+                            addParticle(player.x + player.w/2, player.y + player.h/2, '#0f0');
+                            statusText.textContent = "Blink!";
+                            setTimeout(() => {
+                                if (statusText.textContent === "Blink!") {
+                                    statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                                }
+                            }, 1000);
+                        } else {
+                            statusText.textContent = "Not enough corruption for Blink!";
+                            setTimeout(() => {
+                                if (statusText.textContent === "Not enough corruption for Blink!") {
+                                    statusText.textContent = 'Rules: ' + dims[dimension].rules;
+                                }
+                            }, 1000);
+                        }
+                        lastTapTime[e.key] = 0; // Reset tap for this key
+                    } else {
+                        lastTapTime[e.key] = now;
+                    }
+                }
+                // Slow-Mo ability (hold SPACE)
+                if (e.key === 'Space') {
+                    slowMoActive = true;
+                }
+            }
+        }
+    });
+
+    // Event listener for keyup events to release player movement and abilities
+    window.addEventListener('keyup', (e) => {
+        if (keys.hasOwnProperty(e.key)) {
+            keys[e.key] = false;
+            e.preventDefault();
+            if (ABILITIES_ON && e.key === 'Space') {
+                slowMoActive = false;
+            }
+        }
+    });
+
+    // Event listener for the start button click
+    startBtn.addEventListener('click', () => {
+        console.log("Start button clicked!"); // Debugging line
+        if (!active) { // Ensure game isn't already active
+            try {
+                // Ensure audio system is initialized and resumed
+                // This call ensures audioCtx is created and resumed by a user gesture
+                initAudioSystem();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume().then(() => {
+                        console.log('AudioContext resumed successfully on start button click.');
+                        startMelodyLoop(); // Start melody only after context is running
+                    }).catch(e => {
+                        console.error('Failed to resume AudioContext on start button click:', e);
+                    });
+                } else {
+                    startMelodyLoop(); // Start melody if context is already running
+                }
+
+                intro.classList.add('hidden'); // Hide the intro screen
+                active = true; // Set game to active
+                initGame(); // Initialize game elements (including safe zone setup)
+                loop(); // Start the main game loop
+                console.log("Game active:", active, "Intro hidden:", intro.classList.contains('hidden')); // More debug info
+            } catch (error) {
+                console.error("Error starting game:", error);
+                statusText.textContent = `CRITICAL ERROR: ${error.message}`;
+                statusText.style.color = 'red';
+            }
+        }
+    });
+
+    // Event listener for keyboard shortcuts to start the game
+    window.addEventListener('keydown', (e) => {
+        // Only trigger if the game is not active (i.e., on the intro screen)
+        // and the pressed key is Enter or Spacebar
+        if (!active && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault(); // Prevent default browser action (e.g., scrolling with spacebar)
+            startBtn.click(); // Programmatically click the start button
+        }
+    });
+
+    // Event listener for the mute button click
+    muteBtn.addEventListener('click', () => {
+        if (!audioCtx || !osc) { // Check for osc as well
+            console.warn("AudioContext or oscillator not initialized yet. Cannot mute/unmute.");
+            return;
+        }
+
+        muted = !muted; // Toggle mute state
+        muteBtn.textContent = muted ? '🔇' : '🔊'; // Update button icon
+
+        if (muted) {
+            // Stop the melody interval and set gain to 0
+            if (melodyIntervalId) clearInterval(melodyIntervalId);
+            gain.gain.setValueAtTime(0.0001, audioCtx.currentTime); // Set to very low volume
+            console.log("Audio muted.");
+        } else {
+            // Resume AudioContext if suspended and restart melody
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    console.log('AudioContext resumed for unmute.');
+                    if (active) startMelodyLoop();
+                }).catch(e => {
+                    console.error('Failed to resume AudioContext for unmute:', e);
+                });
+            } else {
+                if (active) startMelodyLoop();
+            }
+            console.log("Audio unmuted.");
+        }
+    });
+
+    // Function to handle the very first user interaction to enable audio
+    function handleFirstUserInteraction() {
+        if (!hasUserInteracted) {
+            hasUserInteracted = true;
+            initAudioSystem(); // Initialize the full audio system (creates context, nodes, connects them silently)
+            // No need to explicitly resume here, as initAudioSystem attempts it
+            document.removeEventListener('click', handleFirstUserInteraction);
+            document.removeEventListener('keydown', handleFirstUserInteraction);
+            console.log("First user interaction detected. Audio system initialized and resume attempted.");
+        }
+    }
+
+    // Attach the first user interaction listener
+    document.addEventListener('click', handleFirstUserInteraction);
+    document.addEventListener('keydown', handleFirstUserInteraction);
+
+    // Event listeners for the new rules button and close button
+    rulesBtn.addEventListener('click', () => {
+        rulesOverlay.classList.remove('hidden');
+    });
+
+    closeRulesBtn.addEventListener('click', () => {
+        rulesOverlay.classList.add('hidden');
+    });
+
+
+    // Initial display of high score
+    displayHighScore();
+    // Initial synchronization of HUD elements
+    updateCorruption();
+
+    console.log("Script initialization complete.");
+});
+
+// THIS IS THE VERY END OF THE SCRIPT. IF THIS LINE IS MISSING, THE FILE IS TRUNCATED.
+</script>
+</body>
+</html>
