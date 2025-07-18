@@ -747,10 +747,10 @@ document.addEventListener('DOMContentLoaded', () => {
         particles.push({
             x, y,
             size: Math.random() * 4 + 2, // Random size
-            vx: (Math.random() - 0.5) * 6, // Random horizontal velocity
-            vy: (Math.random() - 0.5) * 6, // Random vertical velocity
+            vx: (Math.random() - 0.5) * 3, // Reduced velocity for subtlety
+            vy: (Math.random() - 0.5) * 3, // Reduced velocity for subtlety
             color,
-            life: 30 // Particle lifespan
+            life: 20 // Reduced lifespan for subtlety
         });
     }
 
@@ -859,7 +859,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Draws all active particle effects
     function drawParticles() {
         particles.forEach(p => {
-            ctx.globalAlpha = p.life / 30; // Fade out as life decreases
+            ctx.globalAlpha = p.life / 20; // Fade out as life decreases (adjusted for new life)
             ctx.fillStyle = p.color;
             ctx.fillRect(p.x, p.y, p.size, p.size);
         });
@@ -908,7 +908,6 @@ document.addEventListener('DOMContentLoaded', () => {
             player.x = Math.random() * canvas.width;
             player.y = Math.random() * canvas.height;
             addParticle(player.x, player.y, '#0ff'); // Add particles on teleport
-
             statusText.textContent = "Reality shifted! Teleporting...";
             setTimeout(() => {
                 if (statusText.textContent === "Reality shifted! Teleporting.") { // Check if still the same message
@@ -956,6 +955,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 updateCorruption(); // Update HUD and dimension
                 glitchSound(); // Play glitch sound effect
+                // Add particles directly on collision (adjusted for subtlety)
+                for (let i = 0; i < 2; i++) { // Generate 2 particles on collision
+                    addParticle(player.x + player.w / 2, player.y + player.h / 2, player.color);
+                }
             }
         });
     }
@@ -983,7 +986,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dimension = newDim; // Change dimension
             dimName.textContent = dims[dimension].name; // Update dimension name in HUD
             statusText.textContent = 'Rules: ' + dims[dimension].rules; // Update rules in HUD
-            addParticle(canvas.width / 2, canvas.height / 2, dims[dimension].color); // Add particles for dimension change
+            // Particles for dimension change (distinct from collision particles)
+            for (let i = 0; i < 10; i++) {
+                addParticle(canvas.width / 2, canvas.height / 2, dims[dimension].color);
+            }
 
             // Handle special dimension timers
             if (dimension === 5 || dimension === 6) { // Code Overflow or Root Sector
