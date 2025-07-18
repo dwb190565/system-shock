@@ -421,7 +421,7 @@ body{
             <ul>
                 <li><strong>Firewall:</strong> Absorbs one glitch hit.</li>
                 <li><strong>Haste:</strong> Increases your speed.</li>
-                <li><strong>Purge:</strong> Reduces your current corruption.</li>
+                <li><strong>Purge:</b> Reduces your current corruption.</li>
             </ul>
         </div>
         <button class="close-button">CLOSE</button>
@@ -883,8 +883,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dimension === 1) { // Mirror Dimension: inverted controls
             if (keys.ArrowUp) player.y += speed * gameSpeedFactor;
             if (keys.ArrowDown) player.y -= speed * gameSpeedFactor;
-            if (keys.ArrowLeft) player.x += speed * gameSpeedFactor;
-            if (keys.ArrowRight) player.x += speed * gameSpeedFactor;
+            if (keys.ArrowLeft) player.x += speed * gameSpeedFactor; // Corrected: Left moves Right
+            if (keys.ArrowRight) player.x -= speed * gameSpeedFactor; // Corrected: Right moves Left
         } else { // Standard controls for other dimensions
             if (keys.ArrowUp) player.y -= speed * gameSpeedFactor;
             if (keys.ArrowDown) player.y += speed * gameSpeedFactor;
